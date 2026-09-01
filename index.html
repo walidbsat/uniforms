@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>El Alsson Uniform Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (free tier) — used only to store and read orders -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --navy:#16233F; --navy-light:#24365C; --ivory:#F6F3EC; --gold:#A9812F;
+    --sage:#3F5C4E; --clay:#B5482C; --charcoal:#262420; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Public Sans',sans-serif;background:var(--ivory);color:var(--charcoal);}
+  .disp{font-family:'Fraunces',serif;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  input,select,textarea{font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid rgba(22,35,63,.2);width:100%;background:white;}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
+
+  .topbar{background:var(--navy);color:white;}
+  .topbar-inner{max-width:1100px;margin:0 auto;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;background:none;color:white;padding:0;}
+  .brand-mark{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .brand-name{font-size:18px;line-height:1.1;}
+  .brand-sub{font-size:11px;color:#ffffffaa;}
+  .nav-actions{display:flex;align-items:center;gap:18px;}
+  .link-btn{background:none;color:#ffffffcc;font-size:13px;}
+  .cart-btn{background:var(--gold);color:var(--navy);padding:9px 14px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;}
+
+  .hero{max-width:1100px;margin:0 auto;padding:44px 20px 24px;}
+  .hero h1{font-size:38px;font-weight:500;margin:0;max-width:520px;}
+  .hero p{font-size:15px;color:#26242099;margin-top:10px;max-width:440px;}
+  .hero .rule{height:2px;width:64px;background:var(--gold);margin-top:22px;}
+
+  .tabs{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;gap:8px;flex-wrap:wrap;}
+  .tab{font-size:13px;font-weight:600;padding:8px 14px;border:1px solid rgba(22,35,63,.2);background:white;}
+  .tab.active{background:var(--navy);color:white;border-color:var(--navy);}
+
+  .grid{max-width:1100px;margin:0 auto;padding:26px 20px 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;}
+  .card{border:1px solid rgba(22,35,63,.15);background:white;display:flex;flex-direction:column;}
+  .card-art{height:110px;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:22px;}
+  .card-body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+  .card-cat{font-size:11px;font-weight:600;}
+  .card-name{font-size:15px;font-weight:600;margin-top:2px;}
+  .card-desc{font-size:12px;color:#26242088;margin-top:2px;}
+  .card-price{font-size:15px;font-weight:600;margin-top:auto;}
+  .btn-add{background:var(--navy);color:white;padding:9px 0;font-weight:600;font-size:14px;}
+
+  .overlay{position:fixed;inset:0;background:#00000055;z-index:40;}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(420px,100%);background:white;box-shadow:-4px 0 24px #00000022;z-index:50;display:flex;flex-direction:column;}
+  .drawer-head{padding:18px 20px;border-bottom:1px solid rgba(22,35,63,.15);display:flex;align-items:center;justify-content:space-between;}
+  .drawer-body{flex:1;overflow-y:auto;padding:20px;}
+  .drawer-foot{padding:20px;border-top:1px solid rgba(22,35,63,.15);}
+  .x-btn{font-size:20px;line-height:1;color:var(--charcoal);padding:4px;}
+
+  .row{display:flex;justify-content:space-between;font-size:13px;margin-top:4px;}
+  .row.bold{font-size:15px;font-weight:700;}
+  .empty-cart{font-size:14px;color:#26242088;padding:30px 0;text-align:center;}
+
+  .cart-line{display:flex;gap:12px;margin-bottom:16px;}
+  .qty-btn{background:white;border:1px solid rgba(22,35,63,.2);width:26px;height:26px;padding:0;display:inline-flex;align-items:center;justify-content:center;}
+  .remove-btn{background:none;color:var(--clay);font-size:12px;margin-left:8px;}
+
+  .field{margin-bottom:12px;}
+  .field-label{font-size:12px;font-weight:600;margin-bottom:5px;color:#26242099;}
+  .fulfil-row{display:flex;gap:8px;}
+  .fulfil-opt{flex:1;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;background:white;border:1px solid rgba(22,35,63,.2);font-size:13px;font-weight:600;}
+  .fulfil-opt.active{background:var(--navy);color:white;}
+  .note{font-size:12px;color:#26242077;}
+  .err{font-size:13px;color:var(--clay);margin-top:6px;}
+
+  .btn-primary{background:var(--navy);color:white;padding:12px;width:100%;font-weight:600;font-size:14px;}
+  .btn-gold{background:var(--gold);color:var(--navy);padding:12px;font-weight:600;font-size:14px;}
+  .btn-outline{background:white;border:1px solid rgba(22,35,63,.2);padding:12px;font-weight:600;font-size:14px;}
+  .btn-row{display:flex;gap:8px;margin-top:12px;}
+  .btn-row .btn-gold{flex:1;}
+
+  .confirm{text-align:center;padding:10px 0;}
+  .confirm-icon{width:48px;height:48px;border-radius:50%;background:#3F5C4E18;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;color:var(--sage);}
+  .confirm-box{text-align:left;margin-top:20px;border:1px solid rgba(22,35,63,.15);padding:14px;}
+  .confirm-item{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+  .confirm-total{border-top:1px solid rgba(22,35,63,.15);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:600;font-size:13px;}
+
+  .staff-gate{max-width:360px;margin:80px auto;padding:0 20px;text-align:center;}
+  .staff-gate .disp{font-size:20px;margin-bottom:6px;}
+  .staff-hint{font-size:11px;color:#26242066;margin-top:14px;}
+  .staff-wrap{max-width:900px;margin:0 auto;padding:30px 20px 80px;}
+  .staff-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .order-card{border:1px solid rgba(22,35,63,.15);background:white;padding:16px;margin-bottom:12px;}
+  .order-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .order-items{margin-top:10px;font-size:13px;}
+  .order-item-row{display:flex;justify-content:space-between;margin-bottom:3px;}
+  .order-foot{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid rgba(22,35,63,.08);font-size:13px;}
+
+  @media (max-width:520px){ .hero h1{font-size:30px;} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =========================================================
+   1) FIREBASE SETUP — replace with your own project's config
+   Get this from: Firebase console → Project settings →
+   General → Your apps → SDK setup and configuration
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAYKe6x9WlrAWbFqJj6AbfcGOW-KWqZDSk",
+  authDomain: "el-alsson-uniform-shop.firebaseapp.com",
+  projectId: "el-alsson-uniform-shop",
+  storageBucket: "el-alsson-uniform-shop.firebasestorage.app",
+  messagingSenderId: "163991860075",
+  appId: "1:163991860075:web:834b4b80e6d757cc66922e"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* =========================================================
+   2) SHOP CONFIG — edit prices, items, fee and staff code here
+   ========================================================= */
+const STAFF_CODE = "alsson-staff"; // change this before sharing the link
+const DELIVERY_FEE = 75;
+const CATEGORIES = ["Shirts", "Bottoms", "Outerwear", "PE Kit", "Accessories"];
+const CATEGORY_COLOR = {
+  "Shirts": "#24365C", "Bottoms": "#262420", "Outerwear": "#A9812F",
+  "PE Kit": "#3F5C4E", "Accessories": "#B5482C"
+};
+const SIZES = ["4-5Y","6-7Y","8-9Y","10-11Y","12-13Y","S","M","L","XL"];
+const PRODUCTS = [
+  { id:"shirt-ss", name:"White Short-Sleeve Shirt", category:"Shirts", price:350, desc:"Poly-cotton, easy-iron finish" },
+  { id:"shirt-ls", name:"White Long-Sleeve Shirt", category:"Shirts", price:380, desc:"Poly-cotton, easy-iron finish" },
+  { id:"trousers", name:"Grey Tailored Trousers", category:"Bottoms", price:450, desc:"Adjustable waist, durable weave" },
+  { id:"skirt", name:"Grey Pleated Skirt", category:"Bottoms", price:450, desc:"Knife-pleat, knee length" },
+  { id:"shorts-jr", name:"Grey Shorts (Junior)", category:"Bottoms", price:320, desc:"Elasticated waist" },
+  { id:"blazer", name:"Navy Blazer with Crest", category:"Outerwear", price:1250, desc:"Embroidered school crest" },
+  { id:"pe-polo", name:"PE Polo Shirt", category:"PE Kit", price:350, desc:"Breathable performance fabric" },
+  { id:"pe-shorts", name:"PE Shorts", category:"PE Kit", price:300, desc:"Lightweight, quick-dry" },
+  { id:"tracksuit-jkt", name:"Tracksuit Jacket", category:"PE Kit", price:700, desc:"Full-zip, house colour trim" },
+  { id:"tracksuit-pnt", name:"Tracksuit Bottoms", category:"PE Kit", price:550, desc:"Ribbed cuffs" },
+  { id:"tie", name:"School Tie", category:"Accessories", price:150, desc:"House-striped" },
+  { id:"socks", name:"Sports Socks (Pack of 3)", category:"Accessories", price:120, desc:"Cushioned sole" },
+  { id:"cap", name:"House Cap", category:"Accessories", price:200, desc:"Adjustable strap" }
+];
+const STATUS_OPTIONS = ["Pending","Preparing","Ready","Completed"];
+
+/* =========================================================
+   3) APP STATE + RENDER
+   ========================================================= */
+const state = {
+  section: "shop",
+  category: "Shirts",
+  cart: [],
+  cartOpen: false,
+  stage: "cart",
+  lastOrder: null,
+  placing: false,
+  placeError: "",
+  staffAuthed: false,
+  staffError: "",
+  orders: null,
+  ordersLoading: false,
+  unsub: null,
+};
+
+function money(n){ return "EGP " + n.toLocaleString(); }
+function makeOrderId(){ return "EA-" + Date.now().toString(36).toUpperCase().slice(-5) + Math.floor(Math.random()*90+10); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function cartLines(){
+  return state.cart.map(i => {
+    const product = PRODUCTS.find(p => p.id === i.productId);
+    return { ...i, product, lineTotal: product.price * i.qty };
+  });
+}
+function cartCount(){ return state.cart.reduce((s,i)=>s+i.qty,0); }
+function subtotal(){ return cartLines().reduce((s,l)=>s+l.lineTotal,0); }
+
+function addToCart(productId, size){
+  const key = productId + "|" + size;
+  const existing = state.cart.find(i => i.key === key);
+  if (existing) existing.qty += 1;
+  else state.cart.push({ key, productId, size, qty: 1 });
+  state.cartOpen = true;
+  state.stage = "cart";
+  render();
+}
+function changeQty(key, delta){
+  state.cart = state.cart.map(i => i.key===key ? {...i, qty:i.qty+delta} : i).filter(i=>i.qty>0);
+  render();
+}
+function removeItem(key){
+  state.cart = state.cart.filter(i => i.key !== key);
+  render();
+}
+
+async function placeOrder(){
+  const studentName = document.getElementById("f-name")?.value.trim() || "";
+  const grade = document.getElementById("f-grade")?.value.trim() || "";
+  const contact = document.getElementById("f-contact")?.value.trim() || "";
+  const fulfillment = document.querySelector('input[name="fulfil"]:checked')?.value || "pickup";
+  const address = document.getElementById("f-address")?.value.trim() || "";
+  const notes = document.getElementById("f-notes")?.value.trim() || "";
+
+  state.placeError = "";
+  if (!studentName || !grade || !contact){
+    state.placeError = "Please fill in student name, grade and a contact number.";
+    render(); return;
+  }
+  if (fulfillment === "delivery" && !address){
+    state.placeError = "Please add a delivery address.";
+    render(); return;
+  }
+
+  const lines = cartLines();
+  const sub = subtotal();
+  const fee = fulfillment === "delivery" ? DELIVERY_FEE : 0;
+  const order = {
+    id: makeOrderId(),
+    timestamp: new Date().toISOString(),
+    studentName, grade, contact, fulfillment,
+    address: fulfillment === "delivery" ? address : "",
+    notes,
+    items: lines.map(l => ({ name:l.product.name, size:l.size, qty:l.qty, price:l.product.price })),
+    subtotal: sub, deliveryFee: fee, total: sub + fee,
+    status: "Pending"
+  };
+
+  state.placing = true; render();
+  try {
+    await db.collection("orders").doc(order.id).set(order);
+    state.lastOrder = order;
+    state.cart = [];
+    state.stage = "confirmed";
+  } catch (e) {
+    state.placeError = "Something went wrong saving your order. Please try again.";
+  } finally {
+    state.placing = false; render();
+  }
+}
+
+function openStaffOrders(){
+  state.ordersLoading = true; render();
+  if (state.unsub) state.unsub();
+  state.unsub = db.collection("orders").orderBy("timestamp","desc").onSnapshot(
+    snap => {
+      state.orders = snap.docs.map(d => d.data());
+      state.ordersLoading = false;
+      render();
+    },
+    err => { state.orders = []; state.ordersLoading = false; render(); }
+  );
+}
+async function updateStatus(orderId, status){
+  try { await db.collection("orders").doc(orderId).update({ status }); }
+  catch(e){ /* staff can retry */ }
+}
+
+function iconFor(cat){
+  return { "Shirts":"👔","Bottoms":"👖","Outerwear":"🧥","PE Kit":"🎽","Accessories":"🎒" }[cat] || "•";
+}
+
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    ${topbar()}
+    ${state.section === "shop" ? shopView() : staffView()}
+    ${state.section === "shop" && state.cartOpen ? drawer() : ""}
+  `;
+  attachEvents();
+}
+
+function topbar(){
+  return `
+  <div class="topbar"><div class="topbar-inner">
+    <button class="brand" data-action="go-shop">
+      <span class="brand-mark"><span class="disp" style="font-size:14px;color:var(--gold);">EA</span></span>
+      <span><span class="disp brand-name">El Alsson</span><br><span class="brand-sub">Uniform Shop</span></span>
+    </button>
+    <div class="nav-actions">
+      <button class="link-btn" data-action="toggle-staff">${state.section==="staff" ? "Back to shop" : "Staff"}</button>
+      ${state.section==="shop" ? `<button class="cart-btn" data-action="open-cart">🛍️ Cart${cartCount()>0 ? " ("+cartCount()+")" : ""}</button>` : ""}
+    </div>
+  </div></div>`;
+}
+
+function shopView(){
+  const products = PRODUCTS.filter(p => p.category === state.category);
+  return `
+  <div class="hero">
+    <h1 class="disp">Uniform, sorted.</h1>
+    <p>Order official El Alsson uniform online. Collect from the school office or have it delivered to your door.</p>
+    <div class="rule"></div>
+  </div>
+  <div class="tabs">
+    ${CATEGORIES.map(c => `<button class="tab ${c===state.category?"active":""}" data-action="set-cat" data-cat="${c}">${c}</button>`).join("")}
+  </div>
+  <div class="grid">
+    ${products.map(p => productCard(p)).join("")}
+  </div>`;
+}
+
+function productCard(p){
+  const color = CATEGORY_COLOR[p.category];
+  return `
+  <div class="card">
+    <div class="card-art" style="background:${color}14;">${iconFor(p.category)}</div>
+    <div class="card-body">
+      <div>
+        <div class="card-cat" style="color:${color};">${p.category}</div>
+        <div class="card-name">${esc(p.name)}</div>
+        <div class="card-desc">${esc(p.desc)}</div>
+      </div>
+      <div class="card-price">${money(p.price)}</div>
+      <select id="size-${p.id}">${SIZES.map(s=>`<option value="${s}">Size ${s}</option>`).join("")}</select>
+      <button class="btn-add" data-action="add" data-id="${p.id}">Add to cart</button>
+    </div>
+  </div>`;
+}
+
+function drawer(){
+  return `
+  <div class="overlay" data-action="close-cart"></div>
+  <div class="drawer">
+    <div class="drawer-head">
+      <span class="disp" style="font-size:18px;">${state.stage==="cart"?"Your cart":state.stage==="details"?"Order details":"Order placed"}</span>
+      <button class="x-btn" data-action="close-cart">✕</button>
+    </div>
+    <div class="drawer-body">
+      ${state.stage==="cart" ? cartStage() : state.stage==="details" ? detailsStage() : confirmedStage()}
+    </div>
+    <div class="drawer-foot">${drawerFoot()}</div>
+  </div>`;
+}
+
+function cartStage(){
+  const lines = cartLines();
+  if (lines.length===0) return `<div class="empty-cart">Your cart is empty. Add uniform items to get started.</div>`;
+  return lines.map(l => `
+    <div class="cart-line">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;">${esc(l.product.name)}</div>
+        <div style="font-size:12px;color:#26242088;">Size ${l.size}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+          <button class="qty-btn" data-action="qty-dec" data-key="${l.key}">−</button>
+          <span style="font-size:13px;min-width:16px;text-align:center;">${l.qty}</span>
+          <button class="qty-btn" data-action="qty-inc" data-key="${l.key}">+</button>
+          <button class="remove-btn" data-action="remove" data-key="${l.key}">Remove</button>
+        </div>
+      </div>
+      <div style="font-size:14px;font-weight:600;">${money(l.lineTotal)}</div>
+    </div>`).join("");
+}
+
+function detailsStage(){
+  return `
+    <div class="field"><div class="field-label">Student name</div><input id="f-name" placeholder="Full name"></div>
+    <div class="field"><div class="field-label">Grade / year</div><input id="f-grade" placeholder="e.g. Year 7"></div>
+    <div class="field"><div class="field-label">Parent / guardian contact</div><input id="f-contact" placeholder="Phone number"></div>
+    <div class="field">
+      <div class="field-label">Fulfilment</div>
+      <div class="fulfil-row">
+        <label class="fulfil-opt active" id="opt-pickup"><input type="radio" name="fulfil" value="pickup" checked style="display:none;" data-action="fulfil">🏬 Pickup at school</label>
+        <label class="fulfil-opt" id="opt-delivery"><input type="radio" name="fulfil" value="delivery" style="display:none;" data-action="fulfil">🚚 Home delivery</label>
+      </div>
+    </div>
+    <div class="field" id="address-field" style="display:none;">
+      <div class="field-label">Delivery address</div>
+      <textarea id="f-address" rows="3" placeholder="Building, street, area"></textarea>
+    </div>
+    <div class="field"><div class="field-label">Notes (optional)</div><textarea id="f-notes" rows="2" placeholder="Anything the shop team should know"></textarea></div>
+    <p class="note">Payment is made in cash at pickup or on delivery. No card details are collected here.</p>
+    ${state.placeError ? `<div class="err">${esc(state.placeError)}</div>` : ""}
+  `;
+}
+
+function confirmedStage(){
+  const o = state.lastOrder;
+  if (!o) return "";
+  return `
+    <div class="confirm">
+      <div class="confirm-icon">✓</div>
+      <div class="disp" style="font-size:18px;">Thank you, ${esc(o.studentName.split(" ")[0])}</div>
+      <div style="font-size:13px;color:#26242088;margin-top:4px;">Order ${o.id}</div>
+      <div class="confirm-box">
+        ${o.items.map(it => `<div class="confirm-item"><span>${it.qty} × ${esc(it.name)} (${it.size})</span><span>${money(it.price*it.qty)}</span></div>`).join("")}
+        <div class="confirm-total"><span>Total</span><span>${money(o.total)}</span></div>
+      </div>
+      <div style="font-size:13px;margin-top:14px;color:#26242099;">
+        ${o.fulfillment==="pickup" ? "Ready for collection at the school office once prepared." : "Delivery to: " + esc(o.address)}
+      </div>
+    </div>`;
+}
+
+function drawerFoot(){
+  if (state.stage==="cart"){
+    return `
+      <div class="row bold"><span>Subtotal</span><span>${money(subtotal())}</span></div>
+      <button class="btn-primary" style="margin-top:12px;" ${cartLines().length===0?"disabled":""} data-action="go-details">Checkout</button>`;
+  }
+  if (state.stage==="details"){
+    const fee = document.querySelector('input[name="fulfil"]:checked')?.value === "delivery" ? DELIVERY_FEE : 0;
+    return `
+      <div class="row"><span>Subtotal</span><span>${money(subtotal())}</span></div>
+      <div class="row" id="fee-row"><span>Delivery fee</span><span>${fee ? money(fee) : "Free (pickup)"}</span></div>
+      <div class="row bold" id="total-row"><span>Total</span><span>${money(subtotal()+fee)}</span></div>
+      <div class="btn-row">
+        <button class="btn-outline" data-action="back-cart">← Back</button>
+        <button class="btn-gold" ${state.placing?"disabled":""} data-action="place-order">${state.placing?"Placing order…":"Place order"}</button>
+      </div>`;
+  }
+  return `<button class="btn-primary" data-action="continue-shopping">Continue shopping</button>`;
+}
+
+function staffView(){
+  if (!state.staffAuthed){
+    return `
+    <div class="staff-gate">
+      <div style="font-size:22px;">🔒</div>
+      <div class="disp">Staff access</div>
+      <p style="font-size:13px;color:#26242088;margin-bottom:16px;">Enter the shop team code to view and manage orders.</p>
+      <input id="staff-code" type="password" placeholder="Staff code">
+      ${state.staffError ? `<div class="err">${esc(state.staffError)}</div>` : ""}
+      <button class="btn-primary" style="margin-top:12px;" data-action="staff-enter">Enter</button>
+      <p class="staff-hint">Anyone with this code can see and update all orders — treat it like a shared password and change it in the code before sharing the link.</p>
+    </div>`;
+  }
+  return `
+  <div class="staff-wrap">
+    <div class="staff-head"><span class="disp" style="font-size:24px;">Orders</span></div>
+    <p style="font-size:12px;color:#26242077;margin-bottom:20px;">Updates live as new orders come in.</p>
+    ${state.ordersLoading ? `<div style="font-size:13px;color:#26242088;">Loading orders…</div>` : ""}
+    ${!state.ordersLoading && state.orders && state.orders.length===0 ? `<div style="font-size:13px;color:#26242088;">No orders yet.</div>` : ""}
+    ${(state.orders||[]).map(orderCard).join("")}
+  </div>`;
+}
+
+function orderCard(o){
+  return `
+  <div class="order-card">
+    <div class="order-top">
+      <div>
+        <div style="font-weight:600;font-size:14px;">${esc(o.studentName)} — ${esc(o.grade)}</div>
+        <div style="font-size:12px;color:#26242088;">${esc(o.contact)} · ${o.id}</div>
+        <div style="font-size:12px;color:#26242088;">${new Date(o.timestamp).toLocaleString()}</div>
+      </div>
+      <select data-action="status" data-id="${o.id}">
+        ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${s===o.status?"selected":""}>${s}</option>`).join("")}
+      </select>
+    </div>
+    <div class="order-items">
+      ${o.items.map(it=>`<div class="order-item-row"><span>${it.qty} × ${esc(it.name)} (${it.size})</span><span>${money(it.price*it.qty)}</span></div>`).join("")}
+    </div>
+    <div class="order-foot">
+      <span>${o.fulfillment==="pickup" ? "🏬 Pickup at school" : "🚚 " + esc(o.address)}</span>
+      <span style="font-weight:700;">${money(o.total)}</span>
+    </div>
+  </div>`;
+}
+
+/* =========================================================
+   4) EVENTS
+   ========================================================= */
+function attachEvents(){
+  document.querySelectorAll("[data-action]").forEach(el => {
+    const action = el.dataset.action;
+    if (action === "fulfil") return; // handled via change listener below
+    el.addEventListener("click", (e) => {
+      switch(action){
+        case "go-shop": state.section="shop"; state.stage="cart"; render(); break;
+        case "toggle-staff":
+          state.section = state.section==="staff" ? "shop" : "staff";
+          render();
+          if (state.section==="staff" && state.staffAuthed) openStaffOrders();
+          break;
+        case "open-cart": state.cartOpen=true; state.stage="cart"; render(); break;
+        case "close-cart": state.cartOpen=false; render(); break;
+        case "set-cat": state.category = el.dataset.cat; render(); break;
+        case "add": addToCart(el.dataset.id, document.getElementById("size-"+el.dataset.id).value); break;
+        case "qty-dec": changeQty(el.dataset.key, -1); break;
+        case "qty-inc": changeQty(el.dataset.key, 1); break;
+        case "remove": removeItem(el.dataset.key); break;
+        case "go-details": state.stage="details"; render(); break;
+        case "back-cart": state.stage="cart"; render(); break;
+        case "place-order": placeOrder(); break;
+        case "continue-shopping":
+          state.cartOpen=false; state.stage="cart"; state.cart=[]; render();
+          break;
+        case "staff-enter": {
+          const val = document.getElementById("staff-code").value;
+          if (val === STAFF_CODE){ state.staffAuthed=true; state.staffError=""; render(); openStaffOrders(); }
+          else { state.staffError="Incorrect code."; render(); }
+          break;
+        }
+        case "status": break; // handled via change listener
+      }
+    });
+  });
+
+  document.querySelectorAll('input[name="fulfil"]').forEach(el => {
+    el.addEventListener("change", () => {
+      document.getElementById("opt-pickup").classList.toggle("active", el.value==="pickup" ? el.checked : !el.checked);
+      document.getElementById("opt-delivery").classList.toggle("active", el.value==="delivery" ? el.checked : !el.checked);
+      const isDelivery = document.querySelector('input[name="fulfil"]:checked').value === "delivery";
+      document.getElementById("address-field").style.display = isDelivery ? "block" : "none";
+      const fee = isDelivery ? DELIVERY_FEE : 0;
+      document.getElementById("fee-row").innerHTML = `<span>Delivery fee</span><span>${fee?money(fee):"Free (pickup)"}</span>`;
+      document.getElementById("total-row").innerHTML = `<span>Total</span><span>${money(subtotal()+fee)}</span>`;
+    });
+  });
+
+  document.querySelectorAll('select[data-action="status"]').forEach(el => {
+    el.addEventListener("change", () => updateStatus(el.dataset.id, el.value));
+  });
+}
+
+render();
+</script>
+</body>
+</html>
