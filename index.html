@@ -261,6 +261,11 @@ async function updateStatus(orderId, status){
   try { await db.collection("orders").doc(orderId).update({ status }); }
   catch(e){ /* staff can retry */ }
 }
+async function deleteOrder(orderId){
+  if (!confirm("Delete this order? This can't be undone.")) return;
+  try { await db.collection("orders").doc(orderId).delete(); }
+  catch(e){ alert("Couldn't delete the order. Please try again."); }
+}
 
 function iconFor(cat){
   return { "Shirts":"👔","Bottoms":"👖","Outerwear":"🧥","PE Kit":"🎽","Accessories":"🎒" }[cat] || "•";
@@ -450,9 +455,12 @@ function orderCard(o){
         <div style="font-size:12px;color:#26242088;">${esc(o.contact)} · ${o.id}</div>
         <div style="font-size:12px;color:#26242088;">${new Date(o.timestamp).toLocaleString()}</div>
       </div>
-      <select data-action="status" data-id="${o.id}">
-        ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${s===o.status?"selected":""}>${s}</option>`).join("")}
-      </select>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select data-action="status" data-id="${o.id}">
+          ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${s===o.status?"selected":""}>${s}</option>`).join("")}
+        </select>
+        <button class="remove-btn" data-action="delete-order" data-id="${o.id}" style="border:1px solid var(--clay);padding:6px 10px;">Delete</button>
+      </div>
     </div>
     <div class="order-items">
       ${o.items.map(it=>`<div class="order-item-row"><span>${it.qty} × ${esc(it.name)} (${it.size})</span><span>${money(it.price*it.qty)}</span></div>`).join("")}
@@ -499,6 +507,7 @@ function attachEvents(){
           break;
         }
         case "status": break; // handled via change listener
+        case "delete-order": deleteOrder(el.dataset.id); break;
       }
     });
   });
